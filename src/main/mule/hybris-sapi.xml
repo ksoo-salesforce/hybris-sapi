@@ -1,0 +1,301 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:tls="http://www.mulesoft.org/schema/mule/tls" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd  http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd">
+    <http:listener-config name="hybris-sapi-httpListenerConfig">
+        <http:listener-connection host="0.0.0.0" port="8081" />
+    </http:listener-config>
+    <apikit:config name="hybris-sapi-config" api="resource::51323221-32f3-4e62-ab9e-709bcaad83e0:hybris-sapi:1.0.2:raml:zip:hybris-sapi.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="3a9ef0be-e6c7-4683-8452-8d3f1e8eb5de" basePath="${sap.hybris.basepath}">
+        <http:request-connection host="${sap.hybris.host}" port="${sap.hybris.port}" protocol="HTTPS">
+            <tls:context>
+                <tls:trust-store path="DemoHybrisTrustStore.jks" type="jks" />
+            </tls:context>
+        </http:request-connection>
+    </http:request-config>
+    <http:request-config name="HTTP_Token_Request_configuration" doc:name="HTTP Request configuration" doc:id="21633906-7aae-4793-a841-4bce79de2877">
+        <http:request-connection host="${sap.hybris.host}" port="${sap.hybris.port}" protocol="HTTPS">
+            <tls:context>
+                <tls:trust-store path="DemoHybrisTrustStore.jks" type="jks" />
+            </tls:context>
+        </http:request-connection>
+    </http:request-config>
+    <flow name="hybris-sapi-main">
+        <http:listener config-ref="hybris-sapi-httpListenerConfig" path="/api/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:router config-ref="hybris-sapi-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:BAD_REQUEST">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Bad request"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">400</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:METHOD_NOT_ALLOWED">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Method not allowed"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">405</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_ACCEPTABLE">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not acceptable"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">406</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:UNSUPPORTED_MEDIA_TYPE">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Unsupported media type"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">415</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_IMPLEMENTED">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not Implemented"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">501</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="hybris-sapi-console">
+        <http:listener config-ref="hybris-sapi-httpListenerConfig" path="/console/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:console config-ref="hybris-sapi-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="get:\catalogs:hybris-sapi-config">
+        <http:request method="GET" doc:name="Request" doc:id="de6bb003-567a-4e2f-bdb9-9ff12a4ab614" config-ref="HTTP_Request_configuration" path="/catalogs/" />
+        <set-payload value="#[payload]" doc:name="Set Payload" doc:id="47f66cbd-fb23-4964-8848-5c888f85787d" />
+    </flow>
+    <flow name="get:\currencies:hybris-sapi-config">
+        <http:request method="GET" doc:name="Request" doc:id="7629230b-84bf-4e3f-b823-bcc87a293142" config-ref="HTTP_Request_configuration" path="/currencies/" />
+        <set-payload value="#[payload]" doc:name="Set Payload" doc:id="46e91ea3-5b41-4b3a-8cd8-e76e4c50e85f" />
+    </flow>
+    <flow name="get:\products:hybris-sapi-config">
+        <http:request method="GET" doc:name="Request" doc:id="7fbbd7f6-0b23-4cfc-a51d-a5613bc61b63" path="/products/search/" config-ref="HTTP_Request_configuration" />
+        <set-payload value="#[payload]" doc:name="Set Payload" doc:id="5af09011-8466-47f4-8b12-d0396065d9d4" />
+    </flow>
+    <flow name="get:\catalogs\(catalogId)\Online\categories\(categoryId):hybris-sapi-config">
+        <ee:transform>
+            <ee:variables>
+                <ee:set-variable variableName="catalogId">attributes.uriParams.'catalogId'</ee:set-variable>
+                <ee:set-variable variableName="categoryId">attributes.uriParams.'categoryId'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <http:request method="GET" doc:name="Request" doc:id="5981d519-0aff-4315-80af-3bc823f0f6a1" config-ref="HTTP_Request_configuration" path="#['/catalogs/' ++ vars.catalogId ++ '/Online/categories/' ++ vars.categoryId]" />
+        <set-payload value="#[payload]" doc:name="Set Payload" doc:id="d3e895ad-934f-4ab4-92c4-fa71d6e45b4e" />
+    </flow>
+    <flow name="get:\products\(productCode):hybris-sapi-config">
+        <ee:transform>
+            <ee:variables>
+                <ee:set-variable variableName="productCode">attributes.uriParams.'productCode'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <http:request method="GET" doc:name="Request" doc:id="b4b2386a-6daf-4f22-ae4a-5a1e3527e979" config-ref="HTTP_Request_configuration" path="#['/products/' ++ vars.productCode]" />
+        <set-payload value="#[payload]" doc:name="Set Payload" doc:id="0ae39e7d-b526-4512-a76e-96d39070945d" />
+    </flow>
+    <flow name="get:\carts\(userId):hybris-sapi-config">
+        <ee:transform>
+            <ee:variables>
+                <ee:set-variable variableName="userId">attributes.uriParams.'userId'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <flow-ref doc:name="Get Access Token" doc:id="cc7d8211-4348-4102-ab48-e7b4b322b445" name="get-access-token" />
+        <http:request method="GET" doc:name="Request" doc:id="6ec08452-b0d4-4521-9a91-e17b2df212cd" config-ref="HTTP_Request_configuration" path="#['/users/' ++ vars.userId ++ '/carts']">
+            <http:headers><![CDATA[#[output application/java
+---
+{
+	"Authorization" : "bearer " ++ vars.access_token
+}]]]></http:headers>
+        </http:request>
+        <set-payload value="#[payload]" doc:name="Set Payload" doc:id="a57702e1-84ee-403e-bdb7-9b63c8d37b89" />
+    </flow>
+    <flow name="get:\profile\(userId):hybris-sapi-config">
+        <ee:transform>
+            <ee:variables>
+                <ee:set-variable variableName="userId">attributes.uriParams.'userId'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <flow-ref doc:name="Get Access Token" doc:id="c4de909b-ebf0-400c-b904-f9b95ece3adf" name="get-access-token" />
+        <http:request method="GET" doc:name="Request" doc:id="348c8887-2b31-4f3d-93fc-c7b7a129f7f4" config-ref="HTTP_Request_configuration" path="#['/users/' ++ vars.userId]">
+            <http:headers><![CDATA[#[output application/java
+---
+{
+	"Authorization" : "bearer " ++ vars.access_token
+}]]]></http:headers>
+        </http:request>
+        <set-payload value="#[payload]" doc:name="Set Payload" doc:id="1789506c-7402-494e-af51-c04fff441612" />
+    </flow>
+    <flow name="get:\carts\(userId)\(cartId):hybris-sapi-config">
+        <ee:transform>
+            <ee:variables>
+                <ee:set-variable variableName="userId">attributes.uriParams.'userId'</ee:set-variable>
+                <ee:set-variable variableName="cartId">attributes.uriParams.'cartId'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <flow-ref doc:name="Get Access Token" doc:id="020df17c-c45a-4f7a-a1f6-e136ef99aa5b" name="get-access-token" />
+        <http:request method="GET" doc:name="Request" doc:id="ed1c911d-e81e-40b7-b3f1-3deb09b0194b" config-ref="HTTP_Request_configuration" path="#['/users/' ++ vars.userId ++ '/carts/' ++ vars.cartId]">
+            <http:headers><![CDATA[#[output application/java
+---
+{
+	"Authorization" : "bearer " ++ vars.access_token
+}]]]></http:headers>
+        </http:request>
+        <set-payload value="#[payload]" doc:name="Set Payload" doc:id="4ae30966-c42e-49c3-8405-ddfc172af04c" />
+    </flow>
+    <flow name="get:\orders\(userId):hybris-sapi-config">
+        <ee:transform>
+            <ee:variables>
+                <ee:set-variable variableName="userId">attributes.uriParams.'userId'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+		<flow-ref doc:name="Get Access Token" doc:id="d899fdc9-e1a4-4209-8266-e050896313e5" name="get-access-token" />
+		<http:request method="GET" doc:name="Request" doc:id="68e33014-6917-4f4d-9b27-4570d489c337" config-ref="HTTP_Request_configuration" path="#['/users/' ++ vars.userId ++ '/orders']" >
+			<http:headers ><![CDATA[#[output application/java
+---
+{
+	"Authorization" : "bearer " ++ vars.access_token
+}]]]></http:headers>
+		</http:request>
+		<set-payload value="#[payload]" doc:name="Set Payload" doc:id="c9288285-930a-401b-8171-cb103e1019df" />
+    </flow>
+    <flow name="get:\orders\(userId)\(orderId):hybris-sapi-config">
+        <ee:transform>
+            <ee:variables>
+                <ee:set-variable variableName="userId">attributes.uriParams.'userId'</ee:set-variable>
+                <ee:set-variable variableName="orderId">attributes.uriParams.'orderId'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+		<flow-ref doc:name="Get Access Token" doc:id="74441f4f-3901-4d23-941b-ff4982d6f63e" name="get-access-token" />
+		<http:request method="GET" doc:name="Request" doc:id="b8ec31e7-672f-4540-9ba0-9e4964115a6b" config-ref="HTTP_Request_configuration" path="#['/users/' ++ vars.userId ++ '/orders/' ++ vars.orderId]" >
+			<http:headers ><![CDATA[#[output application/java
+---
+{
+	"Authorization" : "bearer " ++ vars.access_token
+}]]]></http:headers>
+		</http:request>
+		<set-payload value="#[payload]" doc:name="Set Payload" doc:id="40ea22c8-7097-430a-9d96-7432cf735d66" />
+    </flow>
+	<sub-flow name="get-access-token" doc:id="fc99a08b-fc73-41c0-b04d-53217eeb5149">
+        <set-variable value="#[payload]" doc:name="Store OG payload" doc:id="e3f46cb8-6dfc-4266-a1be-32d3cab52178" variableName="og_payload" />
+        <ee:transform doc:name="Prepare credentials" doc:id="1e5db26e-c4c5-4f94-b46f-dcb5d139b87f">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"client_id": p('sap.hybris.login.client_id'),
+	"client_secret": p('sap.hybris.login.client_secret'),
+	"grant_type": p('sap.hybris.login.grant_type'),
+	"username": p('sap.hybris.login.username'),
+	"password": p('sap.hybris.login.password')
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        <http:request method="POST" doc:name="Request" doc:id="a8e2f478-19c1-4993-a2ec-a6f3cda04f00" config-ref="HTTP_Token_Request_configuration" path="${sap.hybris.token_path}" sendCorrelationId="AUTO">
+            <http:headers><![CDATA[#[output application/java
+---
+{
+	"Content-Type" : "application/json"
+}]]]></http:headers>
+            <http:query-params><![CDATA[#[output application/java
+---
+{
+	"username" : p('sap.hybris.login.username'),
+	"client_secret" : p('sap.hybris.login.client_secret'),
+	"grant_type" : p('sap.hybris.login.grant_type'),
+	"password" : p('sap.hybris.login.password'),
+	"client_id" : p('sap.hybris.login.client_id')
+}]]]></http:query-params>
+        </http:request>
+        <ee:transform doc:name="store token" doc:id="bd5a3754-5d23-4f67-ac03-8c61bb6674d6">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+payload]]></ee:set-payload>
+            </ee:message>
+            <ee:variables>
+                <ee:set-variable variableName="access_token"><![CDATA[%dw 2.0
+output application/java
+---
+payload.access_token]]></ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <set-payload value="#[vars.og_payload]" doc:name="Set Payload" doc:id="3bad08cc-0cbf-49d8-b7ad-12f1d8df1178" />
+    </sub-flow>
+</mule>

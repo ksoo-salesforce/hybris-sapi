@@ -1,0 +1,14 @@
+sap:
+  hybris:
+    host: "opp-support.demos.mulesoft.com"
+    port: "31993"
+    basepath: "/occ/v2/electronics/"
+    token_path: "/authorizationserver/oauth/token"
+    login:
+      client_id: "pablo"
+      client_secret: "pablosecret"
+      grant_type: "client_credentials"
+      username: "admin"
+      password: "MuleHybris23"
+api:
+  id: "18937828"
